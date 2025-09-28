@@ -1,0 +1,92 @@
+
+Modify my existing Emotion Weather full-stack app (Node.js + Express backend, React + TailwindCSS frontend, MongoDB/Postgres DB) without changing the current pale-white cord.com-inspired theme.
+
+🔹 Changes Needed
+
+1. Sidebar Layout (Left Navigation)
+
+Add a vertical sidebar with expandable/collapsible menus.
+
+Top section: Search Bar (filter/search policies).
+
+Menu items in order:
+
+Policy → show all policies, categories (Agriculture, Business, Health, etc.), total policy count, central vs. state policies. On selecting/searching a policy → show details in center (overview, benefits, eligibility, FAQs, vote button).
+
+Analytics (collapsible with submenus):
+
+Live Results
+
+Vote Distribution
+
+Graphs
+
+Insights (AI summaries)
+
+Word Cloud
+
+Map Visualization
+
+
+Vote & Comment (policy-wise vote buttons + comment section, real-time updates).
+
+Notifications (new policy alerts, sliding cards).
+
+Manage Policy (Admin only): Add/Edit/Delete policy, Upload CSV of comments → AI generates summary, sentiment, and word cloud.
+
+
+
+
+2. Animations (ReactBits + Framer Motion)
+
+Sidebar expand/collapse → Accordion animation.
+
+Policy cards/details → Slide/Fade transition.
+
+Vote buttons → Bounce/Scale effect on click.
+
+Notification cards → Slide-in animation.
+
+Admin forms (Add Policy) → Drawer animation.
+
+Section transitions → Smooth Fade/Slide animations.
+
+
+
+3. Backend Updates
+
+Ensure API support for:
+
+GET /policies, GET /policy/:id
+
+POST /vote, POST /comment
+
+GET /analytics, GET /summary, GET /wordcloud
+
+POST /policy (admin), POST /uploadCSV (AI analysis from CSV).
+
+
+WebSockets (Socket.IO) → push live votes, comments, and notifications to frontend instantly.
+
+
+
+4. AI Integration
+
+Keep current AI summarizer, but extend to:
+
+Generate detailed summaries (not just 2–3 lines).
+
+Classify into Positive Feedback, Angry Concerns, Suggestions.
+
+Build Word Cloud dynamically from CSV-uploaded or live comments.
+
+
+
+
+5. Consistency
+
+Keep same pale-white minimal theme.
+
+Ensure scrollable sidebar with submenus.
+
+Maintain responsive layout for mobile + desktop.

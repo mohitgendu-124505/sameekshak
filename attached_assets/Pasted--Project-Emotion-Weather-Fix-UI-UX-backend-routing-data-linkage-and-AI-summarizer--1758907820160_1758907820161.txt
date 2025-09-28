@@ -1,0 +1,128 @@
+
+
+
+
+> **Project:** Emotion Weather — Fix UI/UX, backend routing, data linkage and AI summarizer behavior while keeping the same theme and styling.
+> **Do NOT change theme**. Make only fixes and additions listed below. Make code changes only where necessary; reuse existing components where possible. Provide unit-testable API behavior, socket events, and clear UI interactions.
+>
+> **High level goals (must satisfy):**
+>
+> 1. Left sidebar must be fully functional, scrollable, and keep its pale-white theme. Add a top **Search bar** in the left column.
+> 2. All Policy listing, policy search, category search, trending/latest ordering, clickable policy cards and policy detail pages must work and be connected to backend APIs.
+> 3. Each policy must have its **own separate** vote & comment store (no cross-policy mixing).
+> 4. Analytics pages must be fully functional: `Vote & Comment` (rename), `Vote Distribution` (charts working), `AI Insights` (searchable by policy; short + detailed summaries + downloads), `Map visualization` (city click analysis), and `Word Cloud` removed from everywhere except the dedicated Word Cloud page (where it must render cleanly, non-meshed).
+> 5. CSV upload per policy (Manage Policy) must parse and trigger AI processing (sentiment, summaries, keywords) and update analytics.
+> 6. Fix AI summary pipeline: produce both **short (2–3 lines)** and **detailed (2–3 paragraphs / bullet points)** per comment-category and ensure AI-generated outputs are saved to DB and returned by `/summary`.
+> 7. Real-time updates via Socket.IO must be reliable and policy-scoped (clients subscribe to a policy channel).
+>
+> **Detailed, prescriptive tasks — frontend + backend (do every item):**
+>
+> ### A. Left Sidebar / Dashboard fixes
+>
+> * Add a **Search bar** at the top of left sidebar (placeholder: `Search policies, categories, keywords...`). Typing triggers `GET /api/policies?search=TERM` with debounce (300ms) and shows live suggestions. Keyboard `Enter` opens center `Policy List` view with results.
+> * Add a **Trending / Latest** strip in the Dashboard center top (below header) that auto-scrolls vertically or horizontally. Trending = highest comment/vote activity in last 7 days; Latest = most recent policies first. These calls use `GET /api/policies?sort=trending` or `?sort=latest`.
+> * Sidebar **Policy** group must show: Total policies count, Central policy count, State policy count (call `GET /api/policies/summary`), and clickable category chips (with search input above categories to filter categories).
+> * Categories are clickable. Clicking a category runs `GET /api/policies?category=NAME` and shows list in center.
+> * Sidebar must be fixed width, independently scrollable; ensure CSS `overflow-y:auto` applied and left column keyboard focus works.
+>
+> ### B. Policy List → Policy Detail behavior
+>
+> * **Policy List page** (center): show paginated cards. Each card displays Title, one-line summary, category chips, state/central badge, and counts (votes total, comments). All cards MUST be clickable (click opens Policy Detail). Fix any unclickable buttons.
+> * When a policy card is clicked, open **Policy Detail page** (`/policy/:id`) in the center. The Policy Detail page must contain:
+>
+>   * Policy Title + metadata (category, central/state badge, created date).
+>   * Tabs: `Overview | Benefits | Eligibility | FAQs | Vote & Comment` (default = Overview).
+>   * The **Benefits / Eligibility / FAQs** are extracted by AI when the policy is created/uploaded: call AI on policy text and fill these fields (store in `policy.ai.benefits`, `policy.ai.eligibility`, `policy.ai.faqs`). If missing, show admin button to “Extract AI fields”.
+>   * Under `Vote & Comment`, show policy-scoped vote buttons and comment form (see next section). Ensure counts displayed (happy/angry/neutral/suggestion).
+> * On Policy Detail page show quick stats at top: `Total policies number` (global), `Central policy count`, `State policy count` and state breakdown related to this policy (call `GET /api/policies/:id/stats`).
+>
+> ### C. Vote & Comment (rename Live Results → Vote & Comment)
+>
+> * Rename sidebar menu item “Live Result” to **Vote & Comment**. This menu opens the global votes/comments dashboard or for a selected policy.
+> * Every policy must have its own vote store and comment collection in DB keyed by `policyId`. Fix backend so POST `/api/vote` and POST `/api/comment` require `policyId` and save data under that key.
+> * Add client-side throttle: 1 vote per session per policy (soft-block UI after vote), but support admin/test override.
+> * On successful POST `/api/vote` the server emits `socket.to(policy_{policyId}).emit('voteUpdate', aggregated)` and global `socket.emit('globalVoteUpdate', ...)`. Clients subscribe with `socket.emit('subscribe', { policyId })`.
+>
+> ### D. Voting distribution page (fix charts)
+>
+> * Ensure `GET /api/results?policyId=&state=&category=` returns aggregated counts per mood and breakdown by state and by category. Implement aggregation queries in DB (Mongo aggregation or SQL GROUP BY).
+> * Connect Recharts components to the results endpoint. Chart types required: Pie/Donut (mood share), Stacked Bar (statewise mood), Line chart (mood trend over time). Add policy search input at top of the Vote Distribution page to choose policy. Charts must animate on update.
+> * Ensure charts accept filters: `state`, `date-range`, `category`. Make the UI filtering clear and always show currently applied filters.
+>
+> ### E. AI Insights page — strongly fix and add features
+>
+> * Add a **policy search box** at top of AI Insights page. Search executes `GET /api/summary?policyId=` and fetches AI outputs for that policy. If none exists, show CTA `Run AI analysis` to process comments/policy text.
+> * Remove extra word-clouds that overlap/mesh from other pages (do not display messy multiple word clouds). Keep Word Cloud only in a single dedicated `Word Cloud` analytics panel accessed from Analytics → Word Cloud. In AI Insights remove the big meshed word cloud; instead show 6–7 short key point lines (each line max 6–7 words) summarizing key sentiments — these are derived from keyword frequencies grouped by sentiment.
+> * For each of the three categories (`Angry Concerns`, `Positive Feedback`, `Suggestions`) show:
+>
+>   * Top 5 short bullet key points (6–7 words each).
+>   * A 2–3 line short summary (visible inline).
+>   * A **Show Detailed** button that opens an expanded modal or accordion with a detailed 2–3 paragraph summary and sample comments.
+> * Implement **Download** buttons for each category: clicking downloads a CSV or TXT with summary lines + sample comments that belong to the category. Endpoint: `GET /api/summary/download?policyId=&category=angry` returns file. Implement server-side CSV generation and streaming.
+> * Make `Trending Concerns`, `Community Support`, `Innovation Ideas` clickable tags that filter AI Insights to show matching summary lines and example comments.
+>
+> ### F. Word Cloud — relocate & fix
+>
+> * Remove word cloud from everywhere except the dedicated **Word Cloud** analytics page. On that page:
+>
+>   * Render a single, clear SVG or canvas-based word cloud using server-provided keywords & font sizes (`GET /api/wordcloud?policyId=`).
+>   * Ensure layout algorithm prevents overlapping (use an existing library or place words in rows with scaled font sizes).
+>   * Provide a policy search box on Word Cloud page.
+>
+> ### G. Map visualization fixes
+>
+> * Fix cloud-zoom mesh problem: clouds must be drawn as SVG overlays anchored to city/state centroid, and should scale smoothly with zoom — **do not** use canvas circles that re-render incorrectly. Use react-leaflet `Pane` + svg markers. Interpolate opacity/size by `intensity = min(1, log(1 + count)/scaleFactor)`.
+> * Clicking a city/state cloud must open a right-side or modal panel with `GET /api/results?policyId=&location=cityName` showing state/city level breakdown and sample comments for that city. Implement endpoint `GET /api/results?policyId=&city=`.
+> * Add a “Heatmap Toggle” vs “Cloud Toggle” for visualization modes.
+>
+> ### H. CSV Upload & Manage Policy changes
+>
+> * In **Manage Policy**: make `Upload CSV` clearly visible per-policy. The uploader must accept CSV with headers: `commentId,text,author,city,state,lat,lon,createdAt`. Validate headers on upload; show row-errors preview if mismatch.
+> * Upload behavior: POST `multipart/form-data` to `/api/admin/uploadCSV?policyId=...`. Server behavior: parse CSV → insert comments into DB with `policyId` → set comment.aiStatus = `queued` → queue background AI job to process batch (classification + summaries + keywords) → update comments and `policy.analytics` when done → emit socket `summaryUpdate` & `csvProcessed`.
+> * Show job progress UI in Manage Policy. Allow re-run analysis for same CSV.
+>
+> ### I. Per-policy isolation & data integrity
+>
+> * Confirm every frontend component that reads votes/comments includes `policyId` in API requests. Fix any hard-coded or missing `policyId` usage.
+> * Comments and votes must never be mixed across policies. Add server-side enforcement: any incoming `POST /comment` or `POST /vote` without `policyId` must return 400.
+>
+> ### J. AI Summarizer & classifier fixes
+>
+> * AI must produce per-comment: `mood`, `aiSentimentScore`, `quickSummary` (2–3 lines), `detailedSummary` (2–3 paragraphs or 4–6 bullet points), and `keywords`. Save in comment record.
+> * Implement `GET /api/summary?policyId=` to return aggregated objects: `{ angryConcerns:[{summary,examples,count}], positiveFeedback:[], suggestions:[], keywords:[], meta: { processedAt, sourceCount } }`.
+> * If AI API key missing or rate limited, fallback to a deterministic summarizer: extract top 3 noun-phrases + first sentence as quickSummary, and mark `aiFallback:true`.
+> * Ensure AI pipeline is robust to CSV batches and incremental updates (reprocess only new comments).
+>
+> ### K. UX & accessibility fixes
+>
+> * Ensure the left menu is keyboard-navigable and elements have `aria-label` attributes.
+> * Search inputs must be accessible and announce the result counts.
+> * Mobile: left menu collapses into a drawer; center content stacks under the header.
+>
+> ### L. Developer / test checklist (deliver with code changes)
+>
+> * Provide a **test script or postman collection** that runs these tests:
+>
+>   1. `GET /api/policies` returns list and counts.
+>   2. `GET /api/policies?search=term` filters policies.
+>   3. Click policy in UI opens `/policy/:id` with correct details.
+>   4. `POST /api/vote` with `policyId` updates DB and emits `voteUpdate` to socket room `policy_{id}`.
+>   5. `POST /api/comment` inserts comment and triggers AI processing (or fallback).
+>   6. `GET /api/summary?policyId=` returns structured summary object.
+>   7. CSV upload endpoint successfully queues job and `csvProcessed` event emitted on completion.
+> * Add end-to-end demo seed data and one example CSV in repository for QA.
+>
+> **Edge cases & notes:**
+>
+> * Do not change colors, paddings, or typography beyond minor spacing fixes — keep the same pale-white cord-inspired theme.
+> * Keep animations but ensure they don’t block or delay critical UI updates (animations should be non-blocking).
+> * Keep auth & admin roles intact; Manage Policy actions require admin token.
+>
+> **When finished, return to me:**
+>
+> 1. A short summary of changed files and exact new endpoints/events added.
+> 2. A small QA checklist I can run in the browser (10 steps).
+> 3. A sample request/response example for `/api/summary?policyId=` and `/api/results?policyId=...` and the socket events `voteUpdate` and `summaryUpdate`.
+>
+> **Do NOT** add new pages or change theme; only fix and add the features listed. Keep code modular and well-documented.
+

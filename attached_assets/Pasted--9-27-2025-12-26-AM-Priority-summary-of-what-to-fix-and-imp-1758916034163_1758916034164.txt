@@ -1,0 +1,263 @@
+𓆩⛦⃕͜𖤍▹▹ 𝗖-𝗘-𝗥-𝗡-𝗘-𝗣 ◃◃ ۞𓆪, [9/27/2025 12:26 AM]
+## Priority summary of what to fix and implement (must do all)
+
+1. Authentication
+
+   * Add full Sign Up and Sign In pages and backend.
+   * Backend: POST /api/auth/signup and POST /api/auth/login. Use hashed passwords (bcrypt) and JWT (or secure session cookies). Validate email format and password strength.
+   * On login, validate user exists. Return 401 for wrong credentials. Redirect authenticated users to /dashboard.
+   * Admin role flag required for Manage Policy actions. Protect admin endpoints with middleware.
+
+2. Per-policy isolation & data integrity (critical)
+
+   * All votes/comments must include policyId. Reject POST /api/vote and POST /api/comment without policyId (400).
+   * Ensure DB schemas link votes/comments to policyId. No mixing across policies.
+   * Implement socket rooms by policy: clients must socket.emit('subscribe', { policyId }). Server will io.to('policy_{policyId}').emit('voteUpdate', ...) and summaryUpdate.
+
+3. Left sidebar & dashboard behavior
+
+   * Add search bar at top of left sidebar. Debounce 300ms, call GET /api/policies?search=.... Show suggestions; Enter opens policy list in center filtered.
+   * Trending/Latest strip on Dashboard: GET /api/policies?sort=trending|latest.
+   * Dashboard widgets (word cloud, charts) must display which policy they represent (policy title header).
+   * Trending policies list: latest on top.
+
+4. Policy listing & detail pages
+
+   * Clicking Policy shows All policies page (paginated) with cards: title, short description, category chips, state/central badge, vote count, comment count. All cards clickable.
+   * Add category search box in that page; category chips are clickable filters.
+   * Policy detail page /policy/:id must display: Title, metadata, tabs Overview | Benefits | Eligibility | FAQs | Vote & Comment.
+   * Benefits / Eligibility / FAQs should be auto-extracted by AI from policy text (backend job) and stored in policy.ai.* fields. Add "Extract AI fields" button for admin to trigger if missing.
+   * Top of policy detail shows quick stats: total policies, central count, state count (global), and per-policy stats by state.
+
+5. Vote & Comment page (rename Live Results)
+
+   * Rename menu item to Vote & Comment.
+   * Implement policy search on Vote & Comment page (to pick which policy's distribution to view).
+   * Charts: Pie (mood share), Stacked bar (statewise mood), Line (trend over time). Accept filters for state, date-range, category.
+   * Charts animate on update and show exact numbers on hover.
+
+6. AI Insights page
+
+   * Add policy search box at top. GET /api/summary?policyId=... returns full AI outputs for selected policy.
+   * Replace multiple messy word clouds: show one clean word cloud in dedicated Word Cloud page only. In AI Insights show six short key-point lines (6–7 words) per sentiment category (Angry, Positive, Suggestions).
+   * For each category show:
+
+     * Top 5 short bullets (6–7 words).
+     * Inline short summary (2–3 lines).
+     * "Show Detailed" button to open detailed 2–3 paragraph summary and sample comments.
+     * "Download" button that returns a CSV/TXT with summary + examples via GET /api/summary/download?policyId=&category=angry.
+   * Clickable tags: Trending Concerns, Community Support, Innovation Ideas — clicking filters the AI insights to show matching content.
+
+7. Word Cloud page
+
+   * Remove word cloud visualizations from other pages.
+   * Dedicated Word Cloud page: GET /api/wordcloud?policyId= returns list of {word, weight}. Render with a layout that avoids overlap (use library or row-based layout). Provide a policy search box here.
+
+8. Map visualization fixes
+
+   * Render clouds as SVG overlays anchored to centroids (react-leaflet Pane + SVG) — avoid canvas re-render mesh issues.
+   * Interpolate opacity/size by intensity = min(1, log(1 + count)/scaleFactor).
+   * Add click handler: click -> GET /api/results?policyId=&city=NAME and open a modal/panel showing city analysis + sample comments.
+
+9. CSV Upload & processing (Manage Policy)
+
+𓆩⛦⃕͜𖤍▹▹ 𝗖-𝗘-𝗥-𝗡-𝗘-𝗣 ◃◃ ۞𓆪, [9/27/2025 12:26 AM]
+* Manage Policy page: per-policy CSV uploader visible on each policy.
+   * CSV format: headers must be commentId,text,author,city,state,lat,lon,createdAt. Validate headers; show row-errors preview on mismatch.
+   * Endpoint: POST /api/admin/uploadCSV?policyId=... (multipart/form-data). Server behavior:
+
+     * Parse CSV, insert comments each with policyId and aiStatus: queued.
+     * Create a background job to process batch (classification + summaries + keywords).
+     * Update each comment with mood, aiSentimentScore, quickSummary, detailedSummary, keywords, aiFallback flag if fallback used.
+     * Update policy.analytics (keyword freq, counts).
+     * Emit socket events: summaryUpdate (policy room) and csvProcessed (global/admin).
+     * Provide /api/admin/jobs to list job status and allow re-run on same CSV.
+   * Show job progress UI in Manage Policy; allow re-run analysis.
+
+10. AI Summarizer & classifier behavior
+
+    * Per-comment fields to produce and save: mood (happy/angry/neutral/suggestion), aiSentimentScore (float), quickSummary (2–3 lines), detailedSummary (2–3 paragraphs or 4–6 bullets), keywords (array), aiFallback boolean.
+    * Implement API GET /api/summary?policyId= returns:
+
+      
+      {
+        angryConcerns: [{ summary, examples: [comment], count }, ...],
+        positiveFeedback: [...],
+        suggestions: [...],
+        keywords: [{word, count}],
+        meta: { processedAt, sourceCount }
+      }
+      
+    * If external AI API key missing/rate-limited, fallback deterministic summarizer: extract top 3 noun phrases + first sentence for quickSummary, set aiFallback:true.
+    * AI pipeline must be incremental – process only new comments after initial run.
+
+11. Real-time & sockets
+
+    * Socket rooms: policy_{id}. Server emits:
+
+      * voteUpdate -> { policyId, aggregated, byState }
+      * commentUpdate -> latest comment object
+      * summaryUpdate -> latest aggregated summaries
+      * csvProcessed -> job info
+    * Clients must subscribe/unsubscribe cleanly to avoid duplicate messages.
+
+12. Fix Agriculture-default bug & other UI bugs
+
+    * Remove any hard-coded default policy ID (agriculture). Ensure components read selectedPolicy from router param or state and call APIs accordingly.
+    * Make all clickable elements actually dispatch navigation or API (fix missing onClick, Link, or history.push bindings).
+    * Ensure search inputs update UI and the URL query (?search=).
+
+13. Accessibility & UX
+
+    * Left menu keyboard navigable; add aria-label attributes.
+    * Search inputs announce result counts (aria-live or similar).
+    * Mobile: left menu becomes drawer; center stacks under header.
+
+14. Logging & diagnostics (deliverable)
+
+    * Add server logs (info/warn/error) that record: API errors, CSV job creation/completion, AI errors/fallbacks, socket disconnects.
+    * Add client console logs at key events (subscribe, vote submit, CSV upload) with clear tags so QA can trace.
+
+15. Tests & QA artifacts
+
+    * Provide Postman collection or cURL scripts to run the tests listed below.
+    * Seed demo data and example CSV in repository for QA.
+
+---
+
+## Test checklist (deliver with fixes — 10 steps the agent must produce and verify)
+
+𓆩⛦⃕͜𖤍▹▹ 𝗖-𝗘-𝗥-𝗡-𝗘-𝗣 ◃◃ ۞𓆪, [9/27/2025 12:26 AM]
+1. GET /api/policies returns list + counts (200).
+2. GET /api/policies?search=term filters results (200).
+3. Click a policy in UI opens /policy/:id with correct details and AI-extracted benefits/eligibility/faqs if available.
+4. POST /api/vote with {policyId, mood, location} stores vote, returns success, and server emits voteUpdate to policy_{id}.
+5. POST /api/comment with {policyId, text, location} inserts comment and returns comment object; socket emits commentUpdate.
+6. GET /api/results?policyId= returns aggregated mood counts and byState breakdown.
+7. GET /api/summary?policyId= returns the structured object containing angryConcerns, positiveFeedback, suggestions, keywords, meta.
+8. Upload example CSV via POST /api/admin/uploadCSV?policyId= queues job, processes comments, updates DB, and emits csvProcessed.
+9. Word Cloud page fetches /api/wordcloud?policyId= and renders a single, non-meshed cloud.
+10. Map page: click a city cloud -> calls GET /api/results?policyId=&city=... and shows city-level analysis modal.
+
+---
+
+## Return artifacts (what the agent must provide when finished)
+
+1. Short summary of changed files and exact new endpoints/events added.
+2. The 10-step QA checklist (above) plus a short browser QA script (click-by-click).
+3. Sample request & response examples for:
+
+   * GET /api/summary?policyId= (example response)
+   * GET /api/results?policyId=... (example response)
+   * WebSocket events voteUpdate and summaryUpdate (example payloads)
+4. Postman collection or curl script to run the tests.
+5. Path to example CSV and seed demo data added.
+
+---
+
+## Implementation notes & strict rules (do not ignore)
+
+* Do not change theme or major styling tokens; minor spacing tweaks OK.
+* All network calls must include policyId when relevant.
+* Server must return appropriate HTTP codes (200, 201, 400, 401, 403, 500).
+* Use non-blocking animations; critical UI must not wait for long animations.
+* If external AI keys are missing, implement fallback summarizer and set aiFallback:true in responses.
+* Admin endpoints must require admin token; non-admins receive 403.
+* Emit socket events with clear policyId scope; avoid broadcasting all updates globally unnecessarily.
+* Provide clear console/server logs for all CSV job lifecycle events.
+
+---
+
+## Sample payloads (copy these into the repository docs)
+
+POST /api/vote
+Request:
+
+POST /api/vote
+{
+  "policyId": "pol_123",
+  "mood": "angry",
+  "location": { "city":"Mumbai","state":"Maharashtra","lat":19.07,"lon":72.87 }
+}
+
+Response:
+
+{ "success": true, "voteId": "v_456" }
+
+Socket event emitted to policy_pol_123:
+
+event: "voteUpdate"
+payload: {
+  "policyId":"pol_123",
+  "aggregated":{"happy":100,"angry":23,"neutral":12,"suggestion":5,"total":140},
+  "byState":{"Maharashtra":{"happy":40,"angry":12},"Karnataka":{"happy":35,"angry":7}}
+}
+
+POST /api/comment
+Request:
+
+POST /api/comment
+{
+  "policyId":"pol_123",
+  "text":"This will hurt small farmers due to extra compliance.",
+  "location": {"city":"Patna","state":"Bihar"}
+}
+
+Response:
+
+{
+  "success": true,
+  "comment": {
+    "id":"c_789",
+    "policyId":"pol_123",
+    "text":"This will hurt small farmers due to extra compliance.",
+    "aiStatus":"queued",
+    "createdAt":"2025-09-27T12:34:56Z"
+  }
+}
+
+Socket event commentUpdate -> payload: the saved comment object.
+
+GET /api/summary?policyId=pol_123
+Example response:
+
+{
+  "angryConcerns":[
+    { "summary":"Compliance cost concerns for small farmers.", "examples":["..."], "count":34 }
+  ],
+  "positiveFeedback":[
+    { "summary":"Clear steps for digital filing.", "examples":["..."], "count":12 }
+  ],
+  "suggestions":[
+    { "summary":"Phase-in period requested for MSMEs.", "examples":["..."], "count":8 }
+  ],
+  "keywords":[ {"word":"compliance","count":72},{"word":"msme","count":45} ],
+  "meta": { "processedAt":"2025-09-27T13:00:00Z", "sourceCount":400 }
+}
+
+GET /api/results?policyId=pol_123
+Example response:
+
+𓆩⛦⃕͜𖤍▹▹ 𝗖-𝗘-𝗥-𝗡-𝗘-𝗣 ◃◃ ۞𓆪, [9/27/2025 12:26 AM]
+{
+  "policyId":"pol_123",
+  "aggregated":{"happy":100,"angry":23,"neutral":12,"suggestion":5,"total":140},
+  "byState": { "Maharashtra":{"happy":40,"angry":12},"Karnataka":{"happy":35,"angry":7} },
+  "trend":[{"date":"2025-09-20","happy":10,"angry":3}, {"date":"2025-09-21","happy":12,"angry":2}]
+}
+
+Socket event `summaryUpdate`
+
+event:"summaryUpdate"
+payload: {
+  "policyId":"pol_123",
+  "summaryMeta": { "processedAt":"2025-09-27T13:00:00Z", "sourceCount":400 }
+}
+
+---
+
+### Final instruction to the agent
+
+* Run static checks and unit tests (if present).
+* Seed the DB with demo policies + sample CSV (include example_comments.csv).
+* When finished, return the deliverables requested under Return artifacts above.

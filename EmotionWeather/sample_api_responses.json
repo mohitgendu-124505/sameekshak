@@ -1,0 +1,611 @@
+{
+  "authentication": {
+    "login_success": {
+      "endpoint": "POST /api/auth/login",
+      "status": 200,
+      "response": {
+        "message": "Login successful",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        "user": {
+          "id": "1f636d86-a9e0-4ecc-b3c6-153f1125cc8b",
+          "username": "admin",
+          "email": "admin@example.com",
+          "isAdmin": true
+        }
+      }
+    },
+    "register_success": {
+      "endpoint": "POST /api/auth/register",
+      "status": 201,
+      "response": {
+        "message": "User registered successfully",
+        "user": {
+          "id": "new-user-uuid",
+          "username": "newuser",
+          "email": "newuser@example.com",
+          "isAdmin": false
+        }
+      }
+    },
+    "invalid_credentials": {
+      "endpoint": "POST /api/auth/login",
+      "status": 401,
+      "response": {
+        "error": "Invalid credentials"
+      }
+    }
+  },
+  "policies": {
+    "get_all_policies": {
+      "endpoint": "GET /api/policies",
+      "status": 200,
+      "response": {
+        "policies": [
+          {
+            "id": "df0dfe97-97bb-464c-8bf0-564b5567f79f",
+            "title": "Agriculture Sustainability Act",
+            "description": "Comprehensive policy for sustainable agricultural practices",
+            "details": "Full policy details...",
+            "status": "active",
+            "createdAt": "2025-09-26T20:00:00.000Z",
+            "benefits": "• Reduced environmental impact\n• Support for farmers...",
+            "eligibility": "• All registered farmers\n• Agricultural cooperatives...",
+            "faqs": "Q: How to apply?\nA: Contact local office...",
+            "aiExtracted": true,
+            "extractedAt": "2025-09-26T20:00:00.000Z"
+          }
+        ],
+        "pagination": {
+          "current": 1,
+          "total": 1,
+          "totalPages": 1,
+          "hasNext": false,
+          "hasPrev": false
+        }
+      }
+    },
+    "get_policy_stats": {
+      "endpoint": "GET /api/policies/{id}/stats",
+      "status": 200,
+      "response": {
+        "voteBreakdown": {
+          "positive": 15,
+          "negative": 3,
+          "neutral": 8,
+          "suggestion": 2
+        },
+        "totalVotes": 28,
+        "sentimentCounts": {
+          "positive": 18,
+          "negative": 5,
+          "neutral": 10
+        },
+        "totalComments": 33,
+        "recentActivity": [
+          {
+            "type": "vote",
+            "voteType": "positive",
+            "comment": "Great policy initiative",
+            "createdAt": "2025-09-26T19:30:00.000Z"
+          }
+        ]
+      }
+    }
+  },
+  "voting": {
+    "vote_success": {
+      "endpoint": "POST /api/vote",
+      "status": 201,
+      "response": {
+        "message": "Vote submitted successfully",
+        "voteId": "vote-uuid-12345"
+      }
+    },
+    "invalid_policy": {
+      "endpoint": "POST /api/vote",
+      "status": 404,
+      "response": {
+        "error": "Policy not found"
+      }
+    },
+    "validation_error": {
+      "endpoint": "POST /api/vote",
+      "status": 400,
+      "response": {
+        "error": "Invalid input",
+        "details": [
+          {
+            "code": "invalid_type",
+            "expected": "string",
+            "received": "undefined",
+            "path": ["policyId"],
+            "message": "Required"
+          }
+        ]
+      }
+    }
+  },
+  "comments": {
+    "comment_success": {
+      "endpoint": "POST /api/comments",
+      "status": 201,
+      "response": {
+        "message": "Comment submitted successfully",
+        "commentId": "comment-uuid-67890"
+      }
+    },
+    "get_policy_comments": {
+      "endpoint": "GET /api/policies/{id}/comments",
+      "status": 200,
+      "response": {
+        "comments": [
+          {
+            "id": "comment-uuid-1",
+            "policyId": "df0dfe97-97bb-464c-8bf0-564b5567f79f",
+            "content": "This policy will help farmers transition to sustainable practices",
+            "author": "John Farmer",
+            "sentiment": "positive",
+            "state": "Iowa",
+            "city": "Des Moines",
+            "createdAt": "2025-09-26T18:45:00.000Z"
+          }
+        ]
+      }
+    }
+  },
+  "core_apis": {
+    "results_api": {
+      "endpoint": "GET /api/results",
+      "status": 200,
+      "response": {
+        "voteBreakdown": {
+          "positive": 158,
+          "negative": 182,
+          "neutral": 123,
+          "suggestion": 46
+        },
+        "sentimentCounts": {
+          "positive": 180,
+          "negative": 195,
+          "neutral": 134
+        },
+        "stateBreakdown": [
+          {
+            "state": "California",
+            "positive": 25,
+            "negative": 18,
+            "neutral": 12,
+            "suggestion": 5,
+            "total": 60
+          }
+        ],
+        "cityBreakdown": [
+          {
+            "city": "Los Angeles",
+            "state": "California",
+            "positive": 12,
+            "negative": 8,
+            "neutral": 5,
+            "suggestion": 2,
+            "total": 27
+          }
+        ],
+        "recentActivity": [
+          {
+            "policyId": "df0dfe97-97bb-464c-8bf0-564b5567f79f",
+            "policyTitle": "Agriculture Sustainability Act",
+            "type": "vote",
+            "voteType": "positive",
+            "comment": "Great initiative for sustainable farming",
+            "state": "Iowa",
+            "city": "Des Moines",
+            "createdAt": "2025-09-26T19:45:00.000Z"
+          }
+        ]
+      }
+    },
+    "summary_api": {
+      "endpoint": "GET /api/summary",
+      "status": 200,
+      "response": {
+        "sentimentCounts": {
+          "positive": 158,
+          "negative": 182,
+          "neutral": 123,
+          "suggestion": 46
+        },
+        "voteBreakdown": {
+          "positive": 145,
+          "negative": 165,
+          "neutral": 115,
+          "suggestion": 42
+        },
+        "timeframe": {
+          "startDate": "2025-09-20T00:00:00.000Z",
+          "endDate": "2025-09-26T23:59:59.000Z",
+          "daysIncluded": 7
+        },
+        "coverage": {
+          "totalStates": 15,
+          "totalCities": 45,
+          "totalPolicies": 20
+        },
+        "totalComments": 509,
+        "totalVotes": 467
+      }
+    },
+    "wordcloud_api": {
+      "endpoint": "GET /api/wordcloud",
+      "status": 200,
+      "response": [
+        {
+          "text": "policy",
+          "value": 89
+        },
+        {
+          "text": "government",
+          "value": 67
+        },
+        {
+          "text": "implementation",
+          "value": 45
+        },
+        {
+          "text": "sustainable",
+          "value": 38
+        },
+        {
+          "text": "agriculture",
+          "value": 34
+        },
+        {
+          "text": "healthcare",
+          "value": 29
+        },
+        {
+          "text": "education",
+          "value": 25
+        },
+        {
+          "text": "infrastructure",
+          "value": 22
+        }
+      ]
+    }
+  },
+  "csv_upload": {
+    "upload_success": {
+      "endpoint": "POST /api/csv/upload",
+      "status": 202,
+      "response": {
+        "message": "CSV upload started",
+        "jobId": "job-uuid-abc123"
+      }
+    },
+    "job_status_processing": {
+      "endpoint": "GET /api/csv/jobs/{jobId}",
+      "status": 200,
+      "response": {
+        "id": "job-uuid-abc123",
+        "status": "processing",
+        "progress": 65,
+        "processed": 130,
+        "total": 200,
+        "startedAt": "2025-09-26T20:00:00.000Z",
+        "results": {
+          "successful": 125,
+          "failed": 5,
+          "errors": [
+            {
+              "row": 45,
+              "error": "Invalid policy ID format"
+            },
+            {
+              "row": 78,
+              "error": "Missing required field: content"
+            }
+          ]
+        }
+      }
+    },
+    "job_status_completed": {
+      "endpoint": "GET /api/csv/jobs/{jobId}",
+      "status": 200,
+      "response": {
+        "id": "job-uuid-abc123",
+        "status": "completed",
+        "progress": 100,
+        "processed": 200,
+        "total": 200,
+        "startedAt": "2025-09-26T20:00:00.000Z",
+        "completedAt": "2025-09-26T20:05:30.000Z",
+        "results": {
+          "successful": 195,
+          "failed": 5,
+          "errors": [
+            {
+              "row": 45,
+              "error": "Invalid policy ID format"
+            }
+          ]
+        }
+      }
+    },
+    "upload_unauthorized": {
+      "endpoint": "POST /api/csv/upload",
+      "status": 401,
+      "response": {
+        "error": "No token provided"
+      }
+    },
+    "upload_forbidden": {
+      "endpoint": "POST /api/csv/upload",
+      "status": 403,
+      "response": {
+        "error": "Admin access required"
+      }
+    }
+  },
+  "ai_extraction": {
+    "extract_success": {
+      "endpoint": "POST /api/ai/extract-policy",
+      "status": 200,
+      "response": {
+        "benefits": [
+          {
+            "title": "Reduced energy consumption",
+            "description": "Up to 30% reduction in energy consumption through smart grid technology and LED lighting systems"
+          },
+          {
+            "title": "Improved traffic flow",
+            "description": "25% reduction in commute times through intelligent traffic management systems"
+          },
+          {
+            "title": "Enhanced air quality monitoring",
+            "description": "Real-time air quality monitoring and pollution reduction through IoT sensors"
+          }
+        ],
+        "eligibility": [
+          {
+            "criteria": "Resident eligibility",
+            "details": "Available to all residents within designated smart city zones"
+          },
+          {
+            "criteria": "Business partnerships",
+            "details": "Businesses can apply for smart energy partnerships and integration programs"
+          },
+          {
+            "criteria": "Property owner incentives",
+            "details": "Property owners eligible for solar panel installation incentives and rebates"
+          }
+        ],
+        "faqs": [
+          {
+            "question": "How will my privacy be protected with all these sensors?",
+            "answer": "All data collection follows strict privacy protocols with anonymization and encryption. Personal data is never stored or tracked."
+          },
+          {
+            "question": "What is the cost to residents?",
+            "answer": "Most services are funded through municipal budgets and grants. Some premium services may have optional fees."
+          },
+          {
+            "question": "When will the smart traffic lights be installed in my area?",
+            "answer": "Installation follows a phased approach. Check the city website for your neighborhood timeline."
+          }
+        ],
+        "cached": false
+      }
+    },
+    "extract_cached": {
+      "endpoint": "POST /api/ai/extract-policy",
+      "status": 200,
+      "response": {
+        "benefits": [
+          {
+            "title": "Free mental health access",
+            "description": "Free access to licensed mental health professionals for students"
+          }
+        ],
+        "eligibility": [
+          {
+            "criteria": "Student age range",
+            "details": "All students aged 13-25 in participating school districts"
+          }
+        ],
+        "faqs": [
+          {
+            "question": "Is this program confidential?",
+            "answer": "Yes, all counseling sessions are strictly confidential except in cases where safety is at risk."
+          }
+        ],
+        "cached": true
+      }
+    },
+    "extract_fallback": {
+      "endpoint": "POST /api/ai/extract-policy",
+      "status": 200,
+      "response": {
+        "benefits": [
+          {
+            "title": "Direct financial support",
+            "description": "Direct financial support through grants and low-interest loans"
+          }
+        ],
+        "eligibility": [
+          {
+            "criteria": "Small business criteria",
+            "details": "Businesses with 50 or fewer employees located within city limits"
+          }
+        ],
+        "faqs": [
+          {
+            "question": "How do I apply for the program?",
+            "answer": "Applications are submitted online quarterly. Visit our website for more information."
+          }
+        ],
+        "error": "AI extraction temporarily unavailable - using fallback parser",
+        "cached": false
+      }
+    },
+    "extract_unauthorized": {
+      "endpoint": "POST /api/ai/extract-policy",
+      "status": 401,
+      "response": {
+        "error": "Invalid token"
+      }
+    },
+    "extract_policy_not_found": {
+      "endpoint": "POST /api/ai/extract-policy",
+      "status": 404,
+      "response": {
+        "message": "Policy not found"
+      }
+    }
+  },
+  "ai_insights": {
+    "insights_success": {
+      "endpoint": "POST /api/ai/insights",
+      "status": 200,
+      "response": {
+        "summary": "<h2>Executive Summary</h2><p>Analysis of 509 citizen comments reveals a mixed but generally positive response to current policy initiatives...</p><h2>Key Findings</h2><ul><li>35.8% positive sentiment overall</li><li>Strong support in urban areas</li><li>Implementation concerns in rural regions</li></ul>",
+        "analysisDate": "2025-09-26T20:15:00.000Z",
+        "source": "Google Gemini AI",
+        "dataPoints": {
+          "totalComments": 509,
+          "sentimentBreakdown": {
+            "positive": 158,
+            "negative": 182,
+            "neutral": 123,
+            "suggestion": 46
+          },
+          "geographicCoverage": 10,
+          "policyFocus": "Agriculture Sustainability Act"
+        },
+        "voteStats": {
+          "voteBreakdown": {
+            "positive": 15,
+            "negative": 8,
+            "neutral": 12,
+            "suggestion": 3
+          },
+          "totalVotes": 38
+        }
+      }
+    }
+  },
+  "geographical_data": {
+    "get_geographical_data": {
+      "endpoint": "GET /api/geographical-data",
+      "status": 200,
+      "response": [
+        {
+          "state": "California",
+          "city": "Los Angeles",
+          "positive": 25,
+          "negative": 15,
+          "neutral": 18,
+          "suggestion": 7,
+          "latitude": 34.0522,
+          "longitude": -118.2437,
+          "total": 65
+        },
+        {
+          "state": "Texas",
+          "city": "Austin",
+          "positive": 20,
+          "negative": 12,
+          "neutral": 15,
+          "suggestion": 5,
+          "latitude": 30.2672,
+          "longitude": -97.7431,
+          "total": 52
+        }
+      ]
+    }
+  },
+  "error_responses": {
+    "validation_error": {
+      "status": 400,
+      "response": {
+        "error": "Invalid input",
+        "details": [
+          {
+            "code": "invalid_type",
+            "expected": "string",
+            "received": "undefined",
+            "path": ["policyId"],
+            "message": "Required"
+          }
+        ]
+      }
+    },
+    "unauthorized": {
+      "status": 401,
+      "response": {
+        "error": "No token provided"
+      }
+    },
+    "forbidden": {
+      "status": 403,
+      "response": {
+        "error": "Admin access required"
+      }
+    },
+    "not_found": {
+      "status": 404,
+      "response": {
+        "error": "Resource not found"
+      }
+    },
+    "server_error": {
+      "status": 500,
+      "response": {
+        "message": "Internal server error"
+      }
+    },
+    "rate_limit": {
+      "status": 429,
+      "response": {
+        "error": "Too many requests",
+        "retryAfter": 60
+      }
+    }
+  },
+  "socket_events": {
+    "vote_update": {
+      "event": "voteUpdate",
+      "data": {
+        "policyId": "df0dfe97-97bb-464c-8bf0-564b5567f79f",
+        "voteBreakdown": {
+          "positive": 16,
+          "negative": 8,
+          "neutral": 12,
+          "suggestion": 3
+        },
+        "totalVotes": 39
+      }
+    },
+    "comment_update": {
+      "event": "commentUpdate",
+      "data": {
+        "policyId": "7e820369-748c-4362-be27-28611a0c9fa5",
+        "comment": {
+          "id": "new-comment-uuid",
+          "content": "Mental health support is crucial for our youth",
+          "author": "Concerned Parent",
+          "sentiment": "positive",
+          "state": "California",
+          "city": "Los Angeles",
+          "createdAt": "2025-09-26T20:30:00.000Z"
+        }
+      }
+    },
+    "room_joined": {
+      "event": "roomJoined",
+      "data": {
+        "room": "policy-df0dfe97-97bb-464c-8bf0-564b5567f79f",
+        "message": "Joined policy room successfully"
+      }
+    }
+  }
+}
