@@ -455,14 +455,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new policy (Admin only)
   app.post("/api/policies", authMiddleware, adminMiddleware, async (req: AuthenticatedRequest, res) => {
     try {
+      console.log("[Policy Creation] Request received:", JSON.stringify(req.body, null, 2));
       const validatedData = insertPolicySchema.parse(req.body);
+      
+      // Check for duplicate policy titles (graceful handling)
+      const existingPolicies = await storage.getAllPolicies();
+      const duplicatePolicy = existingPolicies.find(p => 
+        p.title.toLowerCase().trim() === validatedData.title.toLowerCase().trim()
+      );
+      
+      if (duplicatePolicy) {
+        console.log("[Policy Creation] Duplicate title detected:", validatedData.title);
+        return res.status(409).json({ 
+          message: "A policy with this title already exists", 
+          existingPolicyId: duplicatePolicy.id,
+          suggestion: "Please use a different title or update the existing policy" 
+        });
+      }
+      
       const policy = await storage.createPolicy(validatedData);
+      console.log("[Policy Creation] Success:", policy.id, policy.title);
+      
+      // Emit newPolicy socket event to all connected clients
+      const io = (app as any).io;
+      if (io) {
+        io.emit('newPolicy', {
+          policy,
+          timestamp: new Date().toISOString(),
+          createdBy: req.user?.name || 'Admin'
+        });
+        console.log("[Socket] newPolicy event emitted for policy:", policy.id);
+      }
+      
       res.status(201).json(policy);
     } catch (error) {
+      console.error("[Policy Creation] Error:", error);
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid policy data", errors: error.errors });
+        return res.status(400).json({ 
+          message: "Invalid policy data", 
+          errors: error.errors,
+          details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
+        });
       }
-      res.status(500).json({ message: "Failed to create policy" });
+      
+      // Handle database constraint errors
+      if (error instanceof Error && error.message.includes('duplicate')) {
+        return res.status(409).json({ 
+          message: "A policy with these details already exists",
+          error: error.message
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to create policy", 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
@@ -1541,6 +1588,90 @@ Strategic recommendations for policymakers including:
     } catch (error) {
       console.error("Error generating wordcloud:", error);
       res.status(500).json({ message: "Failed to generate wordcloud data" });
+    }
+  });
+
+  // Notifications API endpoints
+  app.get("/api/notifications", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { limit = "50" } = req.query;
+      const limitNum = Math.min(parseInt(limit as string) || 50, 100); // Cap at 100
+      
+      const notifications = await storage.getNotifications(req.user?.id, limitNum);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.post("/api/notifications", authMiddleware, adminMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { title, message, type, userId, link } = req.body;
+      
+      if (!title || !message) {
+        return res.status(400).json({ message: "Title and message are required" });
+      }
+
+      const notification = await storage.createNotification({
+        title,
+        message,
+        type: type || 'info',
+        userId: userId || null, // null means system-wide notification
+        link: link || null,
+        isRead: false
+      });
+
+      // Emit real-time notification to all clients or specific user
+      const io = (app as any).io;
+      if (io) {
+        if (userId) {
+          io.to(`user-${userId}`).emit("notification", notification);
+        } else {
+          io.emit("notification", notification);
+        }
+      }
+
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      res.status(500).json({ message: "Failed to create notification" });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id, req.user!.id);
+      
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      res.json(notification);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.patch("/api/notifications/read-all", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      await storage.markAllNotificationsAsRead(req.user!.id);
+      res.json({ message: "All notifications marked as read" });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", authMiddleware, async (req: AuthenticatedRequest, res) => {
+    try {
+      const count = await storage.getUnreadCount(req.user?.id);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.status(500).json({ message: "Failed to fetch unread count" });
     }
   });
 

@@ -37,6 +37,7 @@ export default function Manage() {
     description: "",
     status: "draft" as const,
   });
+  const [createPolicyCsvFile, setCreatePolicyCsvFile] = useState<File | null>(null);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -212,7 +213,7 @@ export default function Manage() {
     setTimeout(poll, 2000);
   };
 
-  const handleCreatePolicy = () => {
+  const handleCreatePolicy = async () => {
     if (!newPolicy.title.trim() || !newPolicy.description.trim()) {
       toast({
         title: "Validation Error",
@@ -222,7 +223,52 @@ export default function Manage() {
       return;
     }
 
-    createPolicyMutation.mutate(newPolicy);
+    try {
+      // First create the policy
+      const policy = await createPolicyMutation.mutateAsync(newPolicy);
+      
+      // If CSV file is provided, upload it to the newly created policy
+      if (createPolicyCsvFile && policy?.id) {
+        toast({
+          title: "Policy Created!",
+          description: "Uploading CSV comments...",
+        });
+        
+        const formData = new FormData();
+        formData.append('csvFile', createPolicyCsvFile);
+        
+        // Upload CSV comments to the newly created policy
+        const response = await fetch(`/api/uploadCSV?policyId=${policy.id}`, {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          toast({
+            title: "Policy & CSV Upload Started!",
+            description: `Processing ${result.totalRecords} comments. Job ID: ${result.jobId}`,
+          });
+          pollJobStatus(result.jobId);
+        } else {
+          throw new Error(`CSV upload failed: ${response.status}`);
+        }
+      }
+      
+      // Reset form
+      setIsCreateDialogOpen(false);
+      setNewPolicy({ title: "", description: "", status: "draft" });
+      setCreatePolicyCsvFile(null);
+      
+    } catch (error) {
+      console.error("Policy creation error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create policy. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEditPolicy = (policy: Policy) => {
@@ -742,6 +788,32 @@ export default function Manage() {
                   <SelectItem value="completed">Completed</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Optional CSV Upload Section */}
+            <div className="border-t pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Upload className="h-4 w-4" />
+                <Label>Add Comments from CSV (Optional)</Label>
+              </div>
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setCreatePolicyCsvFile(e.target.files?.[0] || null)}
+                className="mb-2"
+              />
+              {createPolicyCsvFile && (
+                <div className="text-sm text-muted-foreground mb-2">
+                  Selected: {createPolicyCsvFile.name} ({(createPolicyCsvFile.size / 1024).toFixed(1)} KB)
+                </div>
+              )}
+              <div className="bg-muted p-3 rounded text-sm">
+                <p className="font-medium mb-1">CSV Format for Comments:</p>
+                <code className="text-xs">
+                  commentId,text,author,city,state,lat,lon,createdAt<br/>
+                  "1","Great policy","John Doe","San Francisco","CA","37.7749","-122.4194","2024-01-01"
+                </code>
+              </div>
             </div>
             <div className="flex justify-end space-x-3 pt-4">
               <Button 

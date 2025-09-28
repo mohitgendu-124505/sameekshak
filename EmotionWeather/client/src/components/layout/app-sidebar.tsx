@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { NotificationBadge } from "@/components/ui/notification-badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 
 interface AppSidebarProps {
@@ -456,15 +457,22 @@ onClick={() => {
 
           {/* Notifications */}
           <motion.div whileHover={{ x: 2 }} whileTap={{ scale: 0.98 }}>
-            <div className="flex items-center space-x-3 px-3 py-2 rounded-md cursor-pointer hover:bg-accent transition-colors">
-              <Bell className="h-5 w-5" />
-              {!isCollapsed && (
-                <div className="flex items-center justify-between flex-1">
-                  <span className="font-medium">Notifications</span>
-                  <Badge className="bg-red-100 text-red-800">3</Badge>
-                </div>
-              )}
-            </div>
+            <Link href="/notifications">
+              <div className={cn(
+                "flex items-center space-x-3 px-3 py-2 rounded-md cursor-pointer transition-colors",
+                location === "/notifications" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "hover:bg-accent hover:text-accent-foreground"
+              )}>
+                <Bell className="h-5 w-5" />
+                {!isCollapsed && (
+                  <div className="flex items-center justify-between flex-1">
+                    <span className="font-medium">Notifications</span>
+                    <NotificationBadge />
+                  </div>
+                )}
+              </div>
+            </Link>
           </motion.div>
 
           {/* Manage Policy */}

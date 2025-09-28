@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean, decimal, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, boolean, decimal, json, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -67,6 +67,26 @@ export const csvJobs = pgTable("csv_jobs", {
   finishedAt: timestamp("finished_at"),
 });
 
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id), // nullable for system-wide notifications
+  type: text("type").notNull(), // new_policy, policy_update, csv_completed, alert, info
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  relatedPolicyId: varchar("related_policy_id").references(() => policies.id), // optional policy reference
+  relatedData: json("related_data"), // additional data like job IDs, vote counts, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notificationReads = pgTable("notification_reads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  notificationId: varchar("notification_id").references(() => notifications.id, { onDelete: "cascade" }).notNull(),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  readAt: timestamp("read_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserNotification: unique().on(table.userId, table.notificationId),
+}));
+
 // Schema validation
 export const insertUserSchema = z.object({
   name: z.string().min(2).max(100),
@@ -101,6 +121,16 @@ export const insertCsvJobSchema = createInsertSchema(csvJobs).omit({
   createdAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNotificationReadSchema = createInsertSchema(notificationReads).omit({
+  id: true,
+  readAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
@@ -117,3 +147,9 @@ export type Comment = typeof comments.$inferSelect;
 
 export type InsertCsvJob = z.infer<typeof insertCsvJobSchema>;
 export type CsvJob = typeof csvJobs.$inferSelect;
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+export type InsertNotificationRead = z.infer<typeof insertNotificationReadSchema>;
+export type NotificationRead = typeof notificationReads.$inferSelect;

@@ -19,6 +19,7 @@ import Manage from "@/pages/manage";
 import PolicyList from "@/pages/policy-list";
 import PolicyDetail from "@/pages/policy-detail";
 import Analytics from "@/pages/analytics";
+import Notifications from "@/pages/notifications";
 import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
@@ -91,6 +92,7 @@ function AuthenticatedApp() {
               <Route path="/analytics" component={Analytics} />
               <Route path="/emotion-map" component={EmotionMap} />
               <Route path="/summary" component={Summary} />
+              <Route path="/notifications" component={Notifications} />
               <Route path="/manage" component={Manage} />
               <Route path="/policies" component={PolicyList} />
               <Route path="/policy/:id" component={PolicyDetail} />

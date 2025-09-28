@@ -1,12 +1,13 @@
 import { 
   type User, type InsertUser, type Policy, type InsertPolicy, type Vote, type InsertVote, 
   type Comment, type InsertComment, type CsvJob, type InsertCsvJob,
-  policies, votes, comments, users, csvJobs 
+  type Notification, type InsertNotification, type NotificationRead, type InsertNotificationRead,
+  policies, votes, comments, users, csvJobs, notifications, notificationReads 
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, and, desc, count, sql } from "drizzle-orm";
+import { eq, and, or, isNull, desc, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -40,6 +41,13 @@ export interface IStorage {
   updateCsvJob(id: string, updates: Partial<CsvJob>): Promise<CsvJob | undefined>;
   getCsvJobsByPolicy(policyId: string): Promise<CsvJob[]>;
   
+  // Notification methods
+  getNotifications(userId?: string, limit?: number): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(id: string): Promise<Notification | undefined>;
+  markAllNotificationsAsRead(userId?: string): Promise<void>;
+  getUnreadCount(userId?: string): Promise<number>;
+  
   // Geographical data methods
   getGeographicalData(policyId?: string): Promise<any>;
 }
@@ -50,6 +58,7 @@ export class MemStorage implements IStorage {
   private votes: Map<string, Vote>;
   private comments: Map<string, Comment>;
   private csvJobs: Map<string, CsvJob>;
+  private notifications: Map<string, Notification>;
 
   constructor() {
     this.users = new Map();
@@ -57,6 +66,7 @@ export class MemStorage implements IStorage {
     this.votes = new Map();
     this.comments = new Map();
     this.csvJobs = new Map();
+    this.notifications = new Map();
     
     // Initialize with sample data
     this.initializeSampleData();
@@ -620,6 +630,102 @@ export class PostgreSQLStorage implements IStorage {
       .where(eq(csvJobs.policyId, policyId))
       .orderBy(desc(csvJobs.createdAt));
     return result;
+  }
+
+  // Notification methods
+  async getNotifications(userId?: string, limit: number = 50): Promise<Notification[]> {
+    let whereCondition = undefined;
+    
+    if (userId) {
+      // Get user-specific notifications or system-wide notifications (userId is null)
+      whereCondition = or(
+        eq(notifications.userId, userId),
+        isNull(notifications.userId)
+      );
+    }
+    
+    let query = this.db.select().from(notifications);
+    if (whereCondition) {
+      query = query.where(whereCondition);
+    }
+    
+    const result = await query
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+    return result;
+  }
+
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const result = await this.db.insert(notifications).values(insertNotification).returning();
+    return result[0];
+  }
+
+  async markNotificationAsRead(id: string, userId: string): Promise<Notification | undefined> {
+    // Check if the notification exists
+    const notification = await this.db.select().from(notifications)
+      .where(eq(notifications.id, id))
+      .limit(1);
+    
+    if (notification.length === 0) {
+      return undefined;
+    }
+    
+    // Insert or update the read status for this user
+    await this.db.insert(notificationReads)
+      .values({
+        notificationId: id,
+        userId: userId
+      })
+      .onConflictDoUpdate({
+        target: [notificationReads.userId, notificationReads.notificationId],
+        set: { readAt: sql`NOW()` }
+      });
+    
+    return notification[0];
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    // Get all notifications that this user should see (user-specific + system-wide)
+    const userNotifications = await this.db.select({ id: notifications.id })
+      .from(notifications)
+      .where(or(
+        eq(notifications.userId, userId),
+        isNull(notifications.userId)
+      ));
+    
+    // Mark all these notifications as read for this user
+    for (const notification of userNotifications) {
+      await this.db.insert(notificationReads)
+        .values({
+          notificationId: notification.id,
+          userId: userId
+        })
+        .onConflictDoNothing();
+    }
+  }
+
+  async getUnreadCount(userId?: string): Promise<number> {
+    if (!userId) {
+      // If no user ID provided, return 0 (anonymous users see no unread count)
+      return 0;
+    }
+    
+    // Get count of notifications that user should see but hasn't read
+    const result = await this.db.select({ count: count() })
+      .from(notifications)
+      .leftJoin(notificationReads, and(
+        eq(notificationReads.notificationId, notifications.id),
+        eq(notificationReads.userId, userId)
+      ))
+      .where(and(
+        or(
+          eq(notifications.userId, userId),
+          isNull(notifications.userId)
+        ),
+        isNull(notificationReads.id) // Not read by this user
+      ));
+    
+    return result[0].count;
   }
 
   // Geographical data methods

@@ -1,0 +1,153 @@
+
+You are working on the existing Sameekshak / Emotion Weather app (React + Tailwind frontend, Node/Express backend, MongoDB/Postgres DB, Socket.IO, Gemini AI integration). Do not change the theme or global styling. Only make the fixes below, keep code modular, add helpful logs, and ensure frontend ↔️ backend ↔️ database are all connected.
+
+
+---
+
+1) Manage Policy → CSV Upload + Policy Add Error
+
+Add CSV upload option in Create Policy modal.
+
+Backend: support multipart/form-data, parse CSV, insert seed comments, and associate with policy.
+
+Fix policy creation error (graceful handling of duplicates / DB validation).
+
+Emit newPolicy socket event after successful add.
+
+
+
+---
+
+2) Notifications Page
+
+Implement Notifications page.
+
+Backend: GET /api/notifications returns recent notifications (new policies, alerts).
+
+Emit notification socket events.
+
+Frontend: show list of notifications, live updates via sockets, click → navigate to policy.
+
+
+
+---
+
+3) Analytics → Word Cloud
+
+Remove word cloud from AI Insights.
+
+Add standalone Word Cloud Page:
+
+Single clean cloud (30–40 words max).
+
+Backend: GET /api/wordcloud?policyId=<id>&type=<all|positive|negative|suggestion>.
+
+Frontend: chips/tabs to select sentiment type → update cloud.
+
+
+
+
+---
+
+4) Remove Graphs Page
+
+Remove Graphs menu item, route, and broken components.
+
+
+
+---
+
+5) Vote Distribution Fix
+
+Fix charts not rendering.
+
+Backend: GET /api/results?policyId=... returns { happy, angry, neutral, suggestion }.
+
+Frontend: wrap charts with ResponsiveContainer, correct data shape.
+
+Ensure real-time updates via sockets.
+
+
+
+---
+
+6) AI Summary Not Working
+
+Current AI summary (Gemini-based) not returning proper text.
+
+Fix by:
+
+Backend: POST /api/ai/summary?policyId=... must call Gemini summarizer on comments.
+
+Add retries & fallback (if Gemini fails → return DB-stored summary or minimal aggregation).
+
+Log AI response errors clearly.
+
+
+Frontend: ensure AI Summary loads, displays clean formatted text (short + detailed versions).
+
+
+
+---
+
+7) Download Option for Individual Comments
+
+Add Download Button for each comment row in policy detail page.
+
+Options: Download as .csv and .json.
+
+Backend:
+
+GET /api/comments/:id/download?format=csv|json → stream file.
+
+Example:
+
+{ "id": "...", "text": "...", "author": "...", "sentiment": "positive", "policyId": "..." }
+
+
+Frontend: small icon/button on each comment → triggers file download (use <a href> with blob or backend endpoint).
+
+
+
+---
+
+8) General Fixes
+
+Add logging for all errors (policy add, CSV parse, AI errors).
+
+Add fallback UI (e.g., “No votes yet”, “No comments available”).
+
+Test all endpoints with curl (policy create, wordcloud fetch, AI summary, downloads).
+
+
+
+---
+
+✅ Deliverable & Acceptance Criteria
+
+CSV upload in Manage Policy works.
+
+Policy add errors fixed.
+
+Notifications page live & functional.
+
+Word Cloud page shows only one clean selectable cloud.
+
+Graphs page removed.
+
+Vote distribution charts fixed.
+
+AI Summary works reliably.
+
+Each comment has a working download option (CSV & JSON).
+
+Theme unchanged.
+
+Report back with changed files + sample curl commands.
+
+
+
+---
+
+⚡️ Make these changes now. Do not break existing functionality. Keep existing env variables and config intact.
+
