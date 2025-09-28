@@ -37,6 +37,7 @@ export default function Manage() {
     description: "",
     category: "",
     scope: "central" as const,
+    status: "draft" as const,
   });
   const [createPolicyCsvFile, setCreatePolicyCsvFile] = useState<File | null>(null);
   
@@ -53,7 +54,7 @@ export default function Manage() {
   });
 
   const createPolicyMutation = useMutation({
-    mutationFn: async (policyData: { title: string; description: string; category?: string; scope: string }) => {
+    mutationFn: async (policyData: { title: string; description: string; category?: string; scope: string; status: string }) => {
       const response = await apiRequest("POST", "/api/policies", policyData);
       return response.json();
     },
@@ -64,7 +65,7 @@ export default function Manage() {
         description: "Your new policy has been created successfully.",
       });
       setIsCreateDialogOpen(false);
-      setNewPolicy({ title: "", description: "", category: "", scope: "central" });
+      setNewPolicy({ title: "", description: "", category: "", scope: "central", status: "draft" });
     },
     onError: () => {
       toast({
@@ -259,7 +260,7 @@ export default function Manage() {
       
       // Reset form
       setIsCreateDialogOpen(false);
-      setNewPolicy({ title: "", description: "", category: "", scope: "central" });
+      setNewPolicy({ title: "", description: "", category: "", scope: "central", status: "draft" });
       setCreatePolicyCsvFile(null);
       
     } catch (error) {
@@ -804,6 +805,23 @@ export default function Manage() {
                 <SelectContent>
                   <SelectItem value="central">Central</SelectItem>
                   <SelectItem value="state">State</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={newPolicy.status}
+                onValueChange={(value) => setNewPolicy({ ...newPolicy, status: value })}
+              >
+                <SelectTrigger data-testid="select-policy-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="under_review">Under Review</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
             </div>

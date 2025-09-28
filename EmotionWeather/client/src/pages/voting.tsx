@@ -189,7 +189,7 @@ export default function Voting() {
   }, [targetPolicyId, queryClient]);
 
   const submitVoteMutation = useMutation({
-    mutationFn: async (voteData: { policyId: string; voteType: string; comment?: string }) => {
+    mutationFn: async (voteData: { policyId: string; mood: string }) => {
       // Check if user has already voted on this policy
       if (hasVotedOnCurrentPolicy) {
         throw new Error("You have already voted on this policy in this session");
@@ -208,13 +208,8 @@ export default function Voting() {
       sessionStorage.setItem('emotionweather_voted_policies', JSON.stringify(Array.from(newVotedPolicies)));
       
       queryClient.invalidateQueries({ queryKey: ["/api/policies", targetPolicyId, "stats"] });
-      toast({
-        title: "Vote submitted!",
-        description: "Thank you for your feedback. You can view results but cannot vote again on this policy this session.",
-      });
-      setSelectedVote(null);
-      setComment("");
-      setShowCommentBox(false);
+      
+      // Note: State clearing is now handled in handleSubmitVote after both vote and comment are submitted
     },
     onError: (error: any) => {
       toast({
@@ -263,7 +258,7 @@ export default function Voting() {
     setShowCommentBox(true);
   };
 
-  const handleSubmitVote = () => {
+  const handleSubmitVote = async () => {
     // Hard block submission if no policy is selected
     if (!selectedVote || !targetPolicyId || !targetPolicy) {
       toast({
@@ -274,11 +269,39 @@ export default function Voting() {
       return;
     }
 
-    submitVoteMutation.mutate({
-      policyId: targetPolicyId,
-      voteType: selectedVote,
-      comment: comment.trim() || undefined,
-    });
+    // Capture comment value before any mutations that might clear state
+    const userComment = comment.trim();
+
+    try {
+      // Submit the vote first
+      await submitVoteMutation.mutateAsync({
+        policyId: targetPolicyId,
+        mood: selectedVote,
+      });
+
+      // If user provided a comment, submit it separately
+      if (userComment) {
+        await submitCommentMutation.mutateAsync({
+          policyId: targetPolicyId,
+          content: userComment,
+          author: "Anonymous", // Can be extended for authenticated users
+        });
+      }
+
+      // Show success message and clear state only after both operations succeed
+      toast({
+        title: "Vote submitted!",
+        description: "Thank you for your feedback. You can view results but cannot vote again on this policy this session.",
+      });
+      
+      setSelectedVote(null);
+      setComment("");
+      setShowCommentBox(false);
+      
+    } catch (error) {
+      // Error handling is managed by the individual mutations
+      console.error("Error during vote/comment submission:", error);
+    }
   };
 
   const handleCancelVote = () => {
