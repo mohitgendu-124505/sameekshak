@@ -84,23 +84,26 @@ export class AuthService {
   // Set httpOnly cookies
   static setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
     const isProduction = process.env.NODE_ENV === 'production';
+    const isReplit = process.env.REPL_ID !== undefined;
+    
+    // Cookie settings optimized for Replit environment
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction || isReplit, // Force secure in Replit dev
+      sameSite: (isProduction ? 'strict' : 'none') as 'strict' | 'lax' | 'none',
+      path: '/'
+    };
     
     // Set access token cookie (short-lived)
     res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      ...cookieOptions,
       maxAge: 15 * 60 * 1000, // 15 minutes
-      path: '/'
     });
 
     // Set refresh token cookie (long-lived)
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'strict' : 'lax',
+      ...cookieOptions,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/'
     });
   }
 
