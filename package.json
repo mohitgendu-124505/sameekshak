@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/genai": "^1.21.0",
     "@react-spring/web": "^10.0.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.9",

@@ -35,7 +35,8 @@ export default function Manage() {
   const [newPolicy, setNewPolicy] = useState({
     title: "",
     description: "",
-    status: "draft" as const,
+    category: "",
+    scope: "central" as const,
   });
   const [createPolicyCsvFile, setCreatePolicyCsvFile] = useState<File | null>(null);
   
@@ -52,7 +53,7 @@ export default function Manage() {
   });
 
   const createPolicyMutation = useMutation({
-    mutationFn: async (policyData: { title: string; description: string; status: string }) => {
+    mutationFn: async (policyData: { title: string; description: string; category?: string; scope: string }) => {
       const response = await apiRequest("POST", "/api/policies", policyData);
       return response.json();
     },
@@ -63,7 +64,7 @@ export default function Manage() {
         description: "Your new policy has been created successfully.",
       });
       setIsCreateDialogOpen(false);
-      setNewPolicy({ title: "", description: "", status: "draft" });
+      setNewPolicy({ title: "", description: "", category: "", scope: "central" });
     },
     onError: () => {
       toast({
@@ -258,7 +259,7 @@ export default function Manage() {
       
       // Reset form
       setIsCreateDialogOpen(false);
-      setNewPolicy({ title: "", description: "", status: "draft" });
+      setNewPolicy({ title: "", description: "", category: "", scope: "central" });
       setCreatePolicyCsvFile(null);
       
     } catch (error) {
@@ -773,19 +774,35 @@ export default function Manage() {
               />
             </div>
             <div>
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="category">Category</Label>
               <Select
-                value={newPolicy.status}
-                onValueChange={(value) => setNewPolicy({ ...newPolicy, status: value as any })}
+                value={newPolicy.category}
+                onValueChange={(value) => setNewPolicy({ ...newPolicy, category: value })}
               >
-                <SelectTrigger data-testid="select-policy-status">
+                <SelectTrigger data-testid="select-policy-category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Agriculture">Agriculture</SelectItem>
+                  <SelectItem value="Business">Business</SelectItem>
+                  <SelectItem value="Health">Health</SelectItem>
+                  <SelectItem value="Education">Education</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="scope">Policy Level</Label>
+              <Select
+                value={newPolicy.scope}
+                onValueChange={(value) => setNewPolicy({ ...newPolicy, scope: value })}
+              >
+                <SelectTrigger data-testid="select-policy-scope">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="central">Central</SelectItem>
+                  <SelectItem value="state">State</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -863,19 +880,35 @@ export default function Manage() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-category">Category</Label>
                 <Select
-                  value={editingPolicy.status}
-                  onValueChange={(value) => setEditingPolicy({ ...editingPolicy, status: value as any })}
+                  value={editingPolicy.category || ""}
+                  onValueChange={(value) => setEditingPolicy({ ...editingPolicy, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Agriculture">Agriculture</SelectItem>
+                    <SelectItem value="Business">Business</SelectItem>
+                    <SelectItem value="Health">Health</SelectItem>
+                    <SelectItem value="Education">Education</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-scope">Policy Level</Label>
+                <Select
+                  value={editingPolicy.scope}
+                  onValueChange={(value) => setEditingPolicy({ ...editingPolicy, scope: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="under_review">Under Review</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="central">Central</SelectItem>
+                    <SelectItem value="state">State</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
