@@ -459,7 +459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = insertPolicySchema.parse(req.body);
       
       // Check for duplicate policy titles (graceful handling)
-      const existingPolicies = await storage.getAllPolicies();
+      const existingPolicies = await storage.getPolicies();
       const duplicatePolicy = existingPolicies.find(p => 
         p.title.toLowerCase().trim() === validatedData.title.toLowerCase().trim()
       );

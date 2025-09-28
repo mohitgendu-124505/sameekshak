@@ -20,13 +20,18 @@ export class AIService {
   // Test if Gemini API is available
   private static async isGeminiAvailable(): Promise<boolean> {
     try {
+      // Skip test if API key is not set
+      if (!process.env.GEMINI_API_KEY) {
+        return false;
+      }
+      
       const response = await geminiAI.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: "Test connection",
+        contents: [{ role: "user", parts: [{ text: "Test connection" }] }],
       });
       return !!response.text;
     } catch (error) {
-      console.log("Gemini API not available:", error.message);
+      console.log("Gemini API not available:", (error as Error).message);
       return false;
     }
   }
@@ -34,6 +39,11 @@ export class AIService {
   // Test if Perplexity API is available
   private static async isPerplexityAvailable(): Promise<boolean> {
     try {
+      // Skip test if API key is not set
+      if (!process.env.PERPLEXITY_API_KEY) {
+        return false;
+      }
+      
       const response = await fetch("https://api.perplexity.ai/chat/completions", {
         method: "POST",
         headers: {
@@ -49,7 +59,7 @@ export class AIService {
       });
       return response.ok;
     } catch (error) {
-      console.log("Perplexity API not available:", error.message);
+      console.log("Perplexity API not available:", (error as Error).message);
       return false;
     }
   }
@@ -59,7 +69,7 @@ export class AIService {
     try {
       const response = await geminiAI.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: prompt,
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
 
       return {
@@ -202,7 +212,7 @@ Respond with JSON in this format:
             required: ["rating", "confidence"],
           },
         },
-        contents: text,
+        contents: [{ role: "user", parts: [{ text }] }],
       });
 
       const rawJson = response.text;
