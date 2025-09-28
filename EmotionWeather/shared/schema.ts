@@ -16,8 +16,10 @@ export const policies = pgTable("policies", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  details: text("details"), // Additional policy details
   category: text("category"), // Agriculture, Business, Health, Education, Other
   scope: text("scope").notNull().default("central"), // central | state
+  status: text("status").notNull().default("draft"), // draft, active, under_review, completed
   meta: json("meta"), // Additional metadata
   aiExtracted: boolean("ai_extracted").default(false),
   createdAt: timestamp("created_at").defaultNow(),
@@ -34,6 +36,7 @@ export const votes = pgTable("votes", {
   userId: varchar("user_id").references(() => users.id), // nullable for anonymous votes
   policyId: varchar("policy_id").notNull().references(() => policies.id),
   mood: text("mood").notNull(), // happy, angry, neutral, suggestion
+  voteType: text("vote_type"), // Additional vote classification
   city: text("city"),
   state: text("state"),
   lat: decimal("lat", { precision: 10, scale: 8 }),
@@ -46,7 +49,11 @@ export const comments = pgTable("comments", {
   userId: varchar("user_id").references(() => users.id), // nullable for anonymous comments
   policyId: varchar("policy_id").notNull().references(() => policies.id),
   text: text("text").notNull(),
+  content: text("content"), // Alias for text content
+  sentiment: text("sentiment"), // Sentiment analysis result
   mood: text("mood"), // optional mood selection
+  city: text("city"), // Comment location
+  state: text("state"), // Comment state
   aiSummaryShort: text("ai_summary_short"), // 2-3 lines summary
   aiSummaryDetailed: text("ai_summary_detailed"), // 2-3 paragraphs
   aiSentimentScore: decimal("ai_sentiment_score", { precision: 3, scale: 2 }), // -1 to 1

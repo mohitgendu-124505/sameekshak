@@ -362,6 +362,7 @@ export default function Manage() {
   };
 
   const formatStatus = (status: string) => {
+    if (!status) return "Draft";
     return status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase());
   };
 

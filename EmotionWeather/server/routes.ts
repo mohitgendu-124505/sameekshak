@@ -869,16 +869,16 @@ Extract and categorize information into exactly these three sections:
 
       try {
         // Use existing Gemini AI integration
-        const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY;
-        if (!GOOGLE_AI_API_KEY) {
-          throw new Error("Google AI API key not configured");
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        if (!GEMINI_API_KEY) {
+          throw new Error("Gemini API key not configured");
         }
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-goog-api-key': GOOGLE_AI_API_KEY,
+            'x-goog-api-key': GEMINI_API_KEY,
           },
           body: JSON.stringify({
             contents: [{
